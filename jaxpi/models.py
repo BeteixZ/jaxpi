@@ -67,7 +67,9 @@ def _create_optimizer(config):
         tx = optax.adam(
             learning_rate=lr, b1=config.beta1, b2=config.beta2, eps=config.eps
         )
-
+    elif config.optimizer == "L-BFGS":
+        linesearch = optax.scale_by_backtracking_linesearch(max_backtracking_steps=15)
+        tx = optax.lbfgs(linesearch=linesearch)
     else:
         raise NotImplementedError(f"Optimizer {config.optimizer} not supported yet!")
 

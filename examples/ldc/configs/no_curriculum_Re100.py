@@ -45,7 +45,7 @@ def get_config():
     config.training = training = ml_collections.ConfigDict()
     training.Re = [100]
     training.max_steps = [200000]
-    training.batch_size = 1024
+    training.batch_size = 1024*4
 
     # Weighting
     config.weighting = weighting = ml_collections.ConfigDict()

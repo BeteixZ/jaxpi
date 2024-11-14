@@ -32,16 +32,17 @@ class NavierStokes2D(ForwardBVP):
         # Predictions over a grid
         self.u_pred_fn = vmap(self.u_net, (None, 0, 0))
         self.v_pred_fn = vmap(self.v_net, (None, 0, 0))
-        self.p_pred_fn = vmap(self.p_net, (None, 0, 0))
+        self.w_pred_fn = vmap(self.w_net, (None, 0, 0))
         self.r_pred_fn = vmap(self.r_net, (None, None, 0, 0))
+        self.b_pred_fn = vmap(self.b_net, (None, 0, 0))
 
     def neural_net(self, params, x, y):
         z = jnp.stack([x, y])
         outputs = self.state.apply_fn(params, z)
         u = outputs[0]
         v = outputs[1]
-        p = outputs[2]
-        return u, v, p
+        w = outputs[2]
+        return u, v, w
 
     def u_net(self, params, x, y):
         u, _, _ = self.neural_net(params, x, y)
@@ -51,62 +52,24 @@ class NavierStokes2D(ForwardBVP):
         _, v, _ = self.neural_net(params, x, y)
         return v
 
-    def p_net(self, params, x, y):
-        _, _, p = self.neural_net(params, x, y)
-        return p
+    def w_net(self, params, x, y):
+        _, _, w = self.neural_net(params, x, y)
+        return w
 
     def r_net(self, params, nu, x, y):
-        u, v, p = self.neural_net(params, x, y)
+        u, v, w = self.neural_net(params, x, y)
 
-        #def fu_x(x, y):
-        #    return jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (1.0, 0.0))
-#
-        #def fu_y(x, y):
-        #    return jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (0.0, 1.0))
-#
-        #def fv_x(x, y):
-        #    return jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (1.0, 0.0))
-#
-        #def fv_y(x, y):
-        #    return jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (0.0, 1.0))
-#
-        #def fp_x(x, y):
-        #    return jax.jvp(lambda x, y: self.p_net(params, x, y), (x, y), (1.0, 0.0))
-#
-        #def fp_y(x, y):
-        #    return jax.jvp(lambda x, y: self.p_net(params, x, y), (x, y), (0.0, 1.0))
-#
-        #def fu_xx(x, y):
-        #    return jax.jvp(lambda x, y: fu_x(x, y)[1], (x, y), (1.0, 0.0))[1]
-#
-        #def fu_yy(x, y):
-        #    return jax.jvp(lambda x, y: fu_y(x, y)[1], (x, y), (0.0, 1.0))[1]
-#
-        #def fv_xx(x, y):
-        #    return jax.jvp(lambda x, y: fv_x(x, y)[1], (x, y), (1.0, 0.0))[1]
-#
-        #def fv_yy(x, y):
-        #    return jax.jvp(lambda x, y: fv_y(x, y)[1], (x, y), (0.0, 1.0))[1]
-#
-        #_, u_x = fu_x(x, y)
-        #u, u_y = fu_y(x, y)
-        #_, v_x = fv_x(x, y)
-        #v, v_y = fv_y(x, y)
-        #_, p_x = fp_x(x, y)
-        #p, p_y = fp_y(x, y)
-        #u_xx = fu_xx(x, y)
-        #u_yy = fu_yy(x, y)
-        #v_xx = fv_xx(x, y)
-        #v_yy = fv_yy(x, y)
-
-        (u_x, u_y), (v_x, v_y), (p_x, p_y) = jacrev(self.neural_net, argnums=(1, 2))(params, x, y)
+        w_x, w_y = jacrev(self.w_net, argnums=(1, 2))(params, x, y)
 
         u_hessian = hessian(self.u_net, argnums=(1, 2))(params, x, y)
         v_hessian = hessian(self.v_net, argnums=(1, 2))(params, x, y)
+        w_hessian = hessian(self.w_net, argnums=(1, 2))(params, x, y)
         u_xx = u_hessian[0][0]
         u_yy = u_hessian[1][1]
         v_xx = v_hessian[0][0]
         v_yy = v_hessian[1][1]
+        w_xx = w_hessian[0][0]
+        w_yy = w_hessian[1][1]
 
         #u_xx = jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (1.0, 0.0))[1]
         #u_yy = jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (0.0, 1.0))[1]
@@ -114,11 +77,18 @@ class NavierStokes2D(ForwardBVP):
         #v_xx = jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (1.0, 0.0))[1]
         #v_yy = jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (0.0, 1.0))[1]
 
-        ru = u * u_x + v * u_y + p_x - nu * (u_xx + u_yy)
-        rv = u * v_x + v * v_y + p_y - nu * (v_xx + v_yy)
-        rc = u_x + v_y
+        ru = - u_xx - u_yy - w_y
+        rv = - v_xx - v_yy + w_x
+        rc = - nu * (w_xx + w_yy) + u * w_x + v * w_y
 
         return ru, rv, rc
+
+    def b_net(self, params, x, y):
+        # at boundary
+        w = self.w_net(params, x, y)
+        (u_x, u_y), (v_x, v_y), _ = jacrev(self.neural_net, argnums=(1, 2))(params, x, y)
+
+        return w - (v_x - u_y), u_x + v_y
 
     def ru_net(self, params, nu, x, y):
         ru, _, _ = self.r_net(params, nu, x, y)
@@ -138,10 +108,13 @@ class NavierStokes2D(ForwardBVP):
         # Compute forward pass of u and v
         u_pred = self.u_pred_fn(params, self.x_bc1[:, 0], self.x_bc1[:, 1])
         v_pred = self.v_pred_fn(params, self.x_bc2[:, 0], self.x_bc2[:, 1])
+        b_pred = self.b_pred_fn(params, self.x_bc1[:, 0], self.x_bc1[:, 1])
 
         # Compute losses
         u_bc_loss = jnp.mean((u_pred - self.u_bc) ** 2)
         v_bc_loss = jnp.mean(v_pred**2)
+        b1_bc_loss = jnp.mean(b_pred[0] ** 2)
+        b2_bc_loss = jnp.mean(b_pred[1] ** 2)
 
         # Compute forward pass of residual
         ru_pred, rv_pred, rc_pred = self.r_pred_fn(params, nu, batch[:, 0], batch[:, 1])
@@ -153,6 +126,8 @@ class NavierStokes2D(ForwardBVP):
         loss_dict = {
             "u_bc": u_bc_loss,
             "v_bc": v_bc_loss,
+            "b1_bc": b1_bc_loss,
+            "b2_bc": b2_bc_loss,
             "ru": ru_loss,
             "rv": rv_loss,
             "rc": rc_loss,

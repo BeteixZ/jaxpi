@@ -1,0 +1,3 @@
+# exclude all directories named "ckpt"
+**/ckpt/
+**/wandb/

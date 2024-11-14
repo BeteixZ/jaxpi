@@ -12,23 +12,19 @@ def get_config():
     # Weights & Biases
     config.wandb = wandb = ml_collections.ConfigDict()
     wandb.project = "PINN-LDC"
-    wandb.name = "default"
+    wandb.name = "plain"
     wandb.tag = None
 
     # Arch
     config.arch = arch = ml_collections.ConfigDict()
-    arch.arch_name = "ModifiedMlp"
-    arch.num_layers = 5
+    arch.arch_name = "Mlp"
+    arch.num_layers = 4
     arch.hidden_dim = 256
     arch.out_dim = 3
-    arch.activation = "swish"
-    arch.periodicity = False
-    arch.fourier_emb = ml_collections.ConfigDict(
-        {"embed_scale": 10.0, "embed_dim": 256}
-    )
-    arch.reparam = ml_collections.ConfigDict(
-        {"type": "weight_fact", "mean": 1.0, "stddev": 0.1}
-    )
+    arch.activation = "tanh"
+    arch.periodicity = None
+    arch.fourier_emb = None
+    arch.reparam = None
 
     # Optim
     config.optim = optim = ml_collections.ConfigDict()
@@ -38,18 +34,18 @@ def get_config():
     optim.eps = 1e-8
     optim.learning_rate = 1e-3
     optim.decay_rate = 0.9
-    optim.decay_steps = 5000
+    optim.decay_steps = 2000
     optim.grad_accum_steps = 0
 
     # Training
     config.training = training = ml_collections.ConfigDict()
-    training.Re =[100] # [100, 400, 1000]
-    training.max_steps = [40000] # [20000, 40000, 140000]
-    training.batch_size = 1024 * 8
+    training.Re = [100, 400, 1000]
+    training.max_steps = [20000, 40000, 140000]
+    training.batch_size = 1024
 
     # Weighting
     config.weighting = weighting = ml_collections.ConfigDict()
-    weighting.scheme = "grad_norm"
+    weighting.scheme = None
     weighting.init_weights = ml_collections.ConfigDict(
         {"u_bc": 1.0, "v_bc": 1.0, "ru": 1.0, "rv": 1.0, "rc": 1.0}
     )
@@ -68,8 +64,8 @@ def get_config():
 
     # Saving
     config.saving = saving = ml_collections.ConfigDict()
-    saving.save_every_steps = 10000
-    saving.num_keep_ckpts = 1
+    saving.save_every_steps = None
+    saving.num_keep_ckpts = 10
 
     # Input shape for initializing Flax models
     config.input_dim = 2

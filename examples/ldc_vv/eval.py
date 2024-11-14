@@ -337,7 +337,7 @@ def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
     model = models.NavierStokes2D(config)
 
     # Restore checkpoint
-    path = os.path.join("/home/pai/coding/python/jaxpi/examples/ldc/", config.wandb.name, "ckpt", "Re{}".format(Re))
+    path = os.path.join("/home/pai/coding/python/jaxpi/examples/ldc_vv/", config.wandb.name, "ckpt", "Re{}".format(Re))
     model.state = restore_checkpoint(model.state, path)
     params = model.state.params
 

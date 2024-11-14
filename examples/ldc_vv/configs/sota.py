@@ -12,7 +12,7 @@ def get_config():
     # Weights & Biases
     config.wandb = wandb = ml_collections.ConfigDict()
     wandb.project = "PINN-LDC"
-    wandb.name = "default"
+    wandb.name = "sota"
     wandb.tag = None
 
     # Arch
@@ -21,10 +21,10 @@ def get_config():
     arch.num_layers = 5
     arch.hidden_dim = 256
     arch.out_dim = 3
-    arch.activation = "swish"
+    arch.activation = "tanh"
     arch.periodicity = False
     arch.fourier_emb = ml_collections.ConfigDict(
-        {"embed_scale": 10.0, "embed_dim": 256}
+        {"embed_scale": 10.0, "embed_dim": 128}
     )
     arch.reparam = ml_collections.ConfigDict(
         {"type": "weight_fact", "mean": 1.0, "stddev": 0.1}
@@ -38,14 +38,14 @@ def get_config():
     optim.eps = 1e-8
     optim.learning_rate = 1e-3
     optim.decay_rate = 0.9
-    optim.decay_steps = 5000
+    optim.decay_steps = 10000
     optim.grad_accum_steps = 0
 
     # Training
     config.training = training = ml_collections.ConfigDict()
-    training.Re =[100] # [100, 400, 1000]
-    training.max_steps = [40000] # [20000, 40000, 140000]
-    training.batch_size = 1024 * 8
+    training.Re = [100, 400, 1000, 3200]
+    training.max_steps = [50000, 50000, 100000, 500000]
+    training.batch_size = 2048
 
     # Weighting
     config.weighting = weighting = ml_collections.ConfigDict()
@@ -69,7 +69,7 @@ def get_config():
     # Saving
     config.saving = saving = ml_collections.ConfigDict()
     saving.save_every_steps = 10000
-    saving.num_keep_ckpts = 1
+    saving.num_keep_ckpts = 20
 
     # Input shape for initializing Flax models
     config.input_dim = 2
