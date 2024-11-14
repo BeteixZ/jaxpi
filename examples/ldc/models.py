@@ -56,57 +56,57 @@ class NavierStokes2D(ForwardBVP):
         return p
 
     def r_net(self, params, nu, x, y):
-        u, v, p = self.neural_net(params, x, y)
+        # u, v, p = self.neural_net(params, x, y)
 
-        #def fu_x(x, y):
-        #    return jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (1.0, 0.0))
-#
-        #def fu_y(x, y):
-        #    return jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (0.0, 1.0))
-#
-        #def fv_x(x, y):
-        #    return jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (1.0, 0.0))
-#
-        #def fv_y(x, y):
-        #    return jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (0.0, 1.0))
-#
-        #def fp_x(x, y):
-        #    return jax.jvp(lambda x, y: self.p_net(params, x, y), (x, y), (1.0, 0.0))
-#
-        #def fp_y(x, y):
-        #    return jax.jvp(lambda x, y: self.p_net(params, x, y), (x, y), (0.0, 1.0))
-#
-        #def fu_xx(x, y):
-        #    return jax.jvp(lambda x, y: fu_x(x, y)[1], (x, y), (1.0, 0.0))[1]
-#
-        #def fu_yy(x, y):
-        #    return jax.jvp(lambda x, y: fu_y(x, y)[1], (x, y), (0.0, 1.0))[1]
-#
-        #def fv_xx(x, y):
-        #    return jax.jvp(lambda x, y: fv_x(x, y)[1], (x, y), (1.0, 0.0))[1]
-#
-        #def fv_yy(x, y):
-        #    return jax.jvp(lambda x, y: fv_y(x, y)[1], (x, y), (0.0, 1.0))[1]
-#
-        #_, u_x = fu_x(x, y)
-        #u, u_y = fu_y(x, y)
-        #_, v_x = fv_x(x, y)
-        #v, v_y = fv_y(x, y)
-        #_, p_x = fp_x(x, y)
-        #p, p_y = fp_y(x, y)
-        #u_xx = fu_xx(x, y)
-        #u_yy = fu_yy(x, y)
-        #v_xx = fv_xx(x, y)
-        #v_yy = fv_yy(x, y)
+        def fu_x(x, y):
+            return jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (1.0, 0.0))
 
-        (u_x, u_y), (v_x, v_y), (p_x, p_y) = jacrev(self.neural_net, argnums=(1, 2))(params, x, y)
+        def fu_y(x, y):
+            return jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (0.0, 1.0))
 
-        u_hessian = hessian(self.u_net, argnums=(1, 2))(params, x, y)
-        v_hessian = hessian(self.v_net, argnums=(1, 2))(params, x, y)
-        u_xx = u_hessian[0][0]
-        u_yy = u_hessian[1][1]
-        v_xx = v_hessian[0][0]
-        v_yy = v_hessian[1][1]
+        def fv_x(x, y):
+            return jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (1.0, 0.0))
+
+        def fv_y(x, y):
+            return jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (0.0, 1.0))
+
+        def fp_x(x, y):
+            return jax.jvp(lambda x, y: self.p_net(params, x, y), (x, y), (1.0, 0.0))
+
+        def fp_y(x, y):
+            return jax.jvp(lambda x, y: self.p_net(params, x, y), (x, y), (0.0, 1.0))
+
+        def fu_xx(x, y):
+            return jax.jvp(lambda x, y: fu_x(x, y)[1], (x, y), (1.0, 0.0))[1]
+
+        def fu_yy(x, y):
+            return jax.jvp(lambda x, y: fu_y(x, y)[1], (x, y), (0.0, 1.0))[1]
+
+        def fv_xx(x, y):
+            return jax.jvp(lambda x, y: fv_x(x, y)[1], (x, y), (1.0, 0.0))[1]
+
+        def fv_yy(x, y):
+            return jax.jvp(lambda x, y: fv_y(x, y)[1], (x, y), (0.0, 1.0))[1]
+
+        _, u_x = fu_x(x, y)
+        u, u_y = fu_y(x, y)
+        _, v_x = fv_x(x, y)
+        v, v_y = fv_y(x, y)
+        _, p_x = fp_x(x, y)
+        p, p_y = fp_y(x, y)
+        u_xx = fu_xx(x, y)
+        u_yy = fu_yy(x, y)
+        v_xx = fv_xx(x, y)
+        v_yy = fv_yy(x, y)
+
+        #(u_x, u_y), (v_x, v_y), (p_x, p_y) = jacrev(self.neural_net, argnums=(1, 2))(params, x, y)
+
+        #u_hessian = hessian(self.u_net, argnums=(1, 2))(params, x, y)
+        #v_hessian = hessian(self.v_net, argnums=(1, 2))(params, x, y)
+        #u_xx = u_hessian[0][0]
+        #u_yy = u_hessian[1][1]
+        #v_xx = v_hessian[0][0]
+        #v_yy = v_hessian[1][1]
 
         #u_xx = jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (1.0, 0.0))[1]
         #u_yy = jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (0.0, 1.0))[1]

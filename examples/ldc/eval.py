@@ -332,6 +332,7 @@ v_Ghia = {
 def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
     # Load dataset
     u_ref, v_ref, x_star, y_star, nu = get_dataset(Re)
+    nu = nu[0][0]
 
     # Initialize model
     model = models.NavierStokes2D(config)
@@ -347,6 +348,10 @@ def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
     )
     v_pred = vmap(vmap(model.v_net, (None, None, 0)), (None, 0, None))(
         params, x_star, y_star
+    )
+
+    ru, rv, rc = vmap(vmap(model.r_net, (None, None, None, 0)), (None, None, 0, None))(
+        params, nu, x_star, y_star
     )
 
     u_l2_error = jnp.sqrt(jnp.mean((u_ref - u_pred) ** 2)) / jnp.sqrt(
@@ -394,8 +399,38 @@ def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
 
     fig1.savefig(save_path + "ldc_u" + ".pdf", bbox_inches="tight", dpi=300)
 
+    # zoom up the error points
+    fig2 = plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    error_threshold_u = 0.9 * jnp.max(jnp.abs(u_ref[:n_x // 5, -n_y // 5:] - u_pred[:n_x // 5, -n_y // 5:]))
+    error_points_u = jnp.abs(u_ref[:n_x // 5, -n_y // 5:] - u_pred[:n_x // 5, -n_y // 5:]) > error_threshold_u
+    plt.pcolor(XX[:n_x // 5, -n_y // 5:], YY[:n_x // 5, -n_y // 5:],
+               jnp.abs(u_ref[:n_x // 5, -n_y // 5:] - u_pred[:n_x // 5, -n_y // 5:]), cmap="jet")
+    plt.colorbar()
+    plt.scatter(XX[:n_x // 5, -n_y // 5:][error_points_u], YY[:n_x // 5, -n_y // 5:][error_points_u], color='white',
+                s=10)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Upper Left Corner")
+    plt.tight_layout()
+
+    plt.subplot(1, 2, 2)
+    error_threshold_u = 0.9 * jnp.max(jnp.abs(u_ref[4 * n_x // 5:, -n_y // 5:] - u_pred[4 * n_x // 5:, -n_y // 5:]))
+    error_points_u = jnp.abs(u_ref[4 * n_x // 5:, -n_y // 5:] - u_pred[4 * n_x // 5:, -n_y // 5:]) > error_threshold_u
+    plt.pcolor(XX[4 * n_x // 5:, -n_y // 5:], YY[4 * n_x // 5:, -n_y // 5:],
+               jnp.abs(u_ref[4 * n_x // 5:, -n_y // 5:] - u_pred[4 * n_x // 5:, -n_y // 5:]), cmap="jet")
+    plt.colorbar()
+    plt.scatter(XX[4 * n_x // 5:, -n_y // 5:][error_points_u], YY[4 * n_x // 5:, -n_y // 5:][error_points_u],
+                color='white', s=10)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Upper Right Corner")
+    plt.tight_layout()
+
+    fig2.savefig(save_path + "ldc_u_zoom" + ".pdf", bbox_inches="tight", dpi=300)
+
     # Plot the results
-    fig2 = plt.figure(figsize=(18, 5))
+    fig3 = plt.figure(figsize=(18, 5))
     plt.subplot(1, 3, 1)
     plt.pcolor(XX, YY, v_ref, cmap="jet")
     plt.colorbar()
@@ -414,14 +449,50 @@ def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
 
     plt.subplot(1, 3, 3)
     plt.pcolor(XX, YY, jnp.abs(v_ref - v_pred), cmap="jet")
+
+    # Find points with error greater than 90%
+    error_threshold_v = 0.9 * jnp.max(jnp.abs(v_ref - v_pred))
+    error_points_v = jnp.abs(v_ref - v_pred) > error_threshold_v
+
+    # Plot red dots for points with error greater than 90%
+    plt.scatter(XX[error_points_v], YY[error_points_v], color='red', s=10)
     plt.colorbar()
     plt.xlabel("x")
     plt.ylabel("y")
-    plt.title("Absolute error")
+    plt.title("Absolute error with >90% error points")
     plt.tight_layout()
-    fig2.savefig(save_path + "ldc_v" + ".pdf", bbox_inches="tight", dpi=300)
+    fig3.savefig(save_path + "ldc_v" + ".pdf", bbox_inches="tight", dpi=300)
 
-    fig3 = plt.figure(figsize=(12, 5))
+    # zoom up the error points
+    fig4 = plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    error_threshold_v = 0.9 * jnp.max(jnp.abs(v_ref[:n_x // 5, -n_y // 5:] - v_pred[:n_x // 5, -n_y // 5:]))
+    error_points_v = jnp.abs(v_ref[:n_x // 5, -n_y // 5:] - v_pred[:n_x // 5, -n_y // 5:]) > error_threshold_v
+    plt.pcolor(XX[:n_x // 5, -n_y // 5:], YY[:n_x // 5, -n_y // 5:],
+               jnp.abs(v_ref[:n_x // 5, -n_y // 5:] - v_pred[:n_x // 5, -n_y // 5:]), cmap="jet")
+    plt.colorbar()
+    plt.scatter(XX[:n_x // 5, -n_y // 5:][error_points_v], YY[:n_x // 5, -n_y // 5:][error_points_v], color='white', s=10)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Upper Left Corner")
+    plt.tight_layout()
+
+    plt.subplot(1, 2, 2)
+    error_threshold_v = 0.9 * jnp.max(jnp.abs(v_ref[4*n_x // 5:, -n_y // 5:] - v_pred[4*n_x // 5:, -n_y // 5:]))
+    error_points_v = jnp.abs(v_ref[4*n_x // 5:, -n_y // 5:] - v_pred[4*n_x // 5:, -n_y // 5:]) > error_threshold_v
+    plt.pcolor(XX[4*n_x // 5:, -n_y // 5:], YY[4*n_x // 5:, -n_y // 5:],
+               jnp.abs(v_ref[4*n_x // 5:, -n_y // 5:] - v_pred[4*n_x // 5:, -n_y // 5:]), cmap="jet")
+    plt.colorbar()
+    plt.scatter(XX[4*n_x // 5:, -n_y // 5:][error_points_v], YY[4*n_x // 5:, -n_y // 5:][error_points_v], color='white', s=10)
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("Upper Right Corner")
+    plt.tight_layout()
+
+    fig4.savefig(save_path + "ldc_v_zoom" + ".pdf", bbox_inches="tight", dpi=300)
+
+
+    fig5 = plt.figure(figsize=(12, 5))
     plt.subplot(1, 2, 1)
     plt.plot(y_Ghia, u_Ghia[Re], "o", label="Ghia")
     plt.plot(y_star, u_ref[n_x // 2, :], label="Reference")
@@ -437,6 +508,57 @@ def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
     plt.plot(y_star, v_pred[:, n_y // 2], label="Predicted")
     plt.xlabel("x")
     plt.ylabel("v(x, 0.5)")
+
     plt.legend()
     plt.tight_layout()
-    fig3.savefig(save_path + "ldc_Ghia" + ".pdf", bbox_inches="tight", dpi=300)
+    fig5.savefig(save_path + "ldc_Ghia" + ".pdf", bbox_inches="tight", dpi=300)
+
+    fig6 = plt.figure(figsize=(18, 11))
+    plt.subplot(2, 3, 1)
+    plt.pcolor(XX[:n_x // 5, -n_y // 5:], YY[:n_x // 5, -n_y // 5:], ru[:n_x // 5, -n_y // 5:], cmap="jet", vmin=-0.5, vmax=0.5)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("ru(x, y) LU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 2)
+    plt.pcolor(XX[:n_x // 5, -n_y // 5:], YY[:n_x // 5, -n_y // 5:], rv[:n_x // 5, -n_y // 5:], cmap="jet", vmin=-0.5, vmax=0.5)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("rv(x, y) LU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 3)
+    plt.pcolor(XX[:n_x // 5, -n_y // 5:], YY[:n_x // 5, -n_y // 5:], rc[:n_x // 5, -n_y // 5:], cmap="jet", vmin=-0.5, vmax=0.5)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("rc(x, y) LU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 4)
+    plt.pcolor(XX[4*n_x // 5:, -n_y // 5:], YY[4*n_x // 5:, -n_y // 5:], ru[4*n_x // 5:, -n_y // 5:], cmap="jet", vmin=-0.5, vmax=0.5)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("ru(x, y) RU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 5)
+    plt.pcolor(XX[4*n_x // 5:, -n_y // 5:], YY[4*n_x // 5:, -n_y // 5:], rv[4*n_x // 5:, -n_y // 5:], cmap="jet", vmin=-0.5, vmax=0.5)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("rv(x, y) RU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 6)
+    plt.pcolor(XX[4*n_x // 5:, -n_y // 5:], YY[4*n_x // 5:, -n_y // 5:], rc[4*n_x // 5:, -n_y // 5:], cmap="jet", vmin=-0.5, vmax=0.5)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("rc(x, y) RU")
+    plt.tight_layout()
+    fig6.savefig(save_path + "ldc_res" + ".pdf", bbox_inches="tight", dpi=300)

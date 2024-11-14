@@ -31,7 +31,7 @@ class BaseEvaluator:
             self.log_dict[key + "_grad_norm"] = grad_norm
 
     def log_ntk(self, params, batch, *args):
-        ntk = self.model.compute_diag_ntk(params, batch)
+        ntk = self.model.compute_diag_ntk(params, batch, *args)
         mean_ntk_dict = tree_map(lambda x: jnp.mean(x), ntk)
 
         for key, values in mean_ntk_dict.items():
