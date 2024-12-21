@@ -135,9 +135,9 @@ class NavierStokes2D(ForwardBVP):
     def b_net(self, params, x, y):
         # at boundary
         w = self.w_net(params, x, y)
-        (u_x, u_y), (v_x, v_y), _ = jacrev(self.neural_net, argnums=(1, 2))(params, x, y)
 
-        return w - (v_x - u_y), u_x + v_y
+        (u_x, u_y), (v_x, v_y), _ = jacrev(self.neural_net, argnums=(1, 2))(params, x, y)
+        return w - (v_x - u_y), (u_x + v_y)
 
     def ru_net(self, params, nu, x, y):
         ru, _, _ = self.r_net(params, nu, x, y)
@@ -162,8 +162,8 @@ class NavierStokes2D(ForwardBVP):
         # Compute losses
         u_bc_loss = jnp.mean((u_pred - self.u_bc) ** 2)
         v_bc_loss = jnp.mean(v_pred**2)
-        b1_bc_loss = jnp.mean(b_pred[0] ** 2)
-        b2_bc_loss = jnp.mean(b_pred[1] ** 2)
+        b1_bc_loss = 0.5 * jnp.mean(b_pred ** 2)
+        # b2_bc_loss = 0.5 * jnp.mean(b_pred[1] ** 2)
 
         # Compute forward pass of residual
         ru_pred, rv_pred, rc_pred = self.r_pred_fn(params, nu, batch[:, 0], batch[:, 1])
@@ -176,7 +176,7 @@ class NavierStokes2D(ForwardBVP):
             "u_bc": u_bc_loss,
             "v_bc": v_bc_loss,
             "b1_bc": b1_bc_loss,
-            "b2_bc": b2_bc_loss,
+            # "b2_bc": b2_bc_loss,
             "ru": ru_loss,
             "rv": rv_loss,
             "rc": rc_loss,

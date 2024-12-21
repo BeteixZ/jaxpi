@@ -56,7 +56,6 @@ def _create_arch(config):
 
     return arch
 
-
 def _create_optimizer(config):
     if config.optimizer == "Adam":
         lr = optax.exponential_decay(
@@ -68,8 +67,26 @@ def _create_optimizer(config):
             learning_rate=lr, b1=config.beta1, b2=config.beta2, eps=config.eps
         )
     elif config.optimizer == "L-BFGS":
-        linesearch = optax.scale_by_backtracking_linesearch(max_backtracking_steps=15)
-        tx = optax.lbfgs(linesearch=linesearch)
+        # def value_and_grad_fn(params, weights, batch, nu):
+        #     """Return both value and gradients."""
+        #     value = loss(params, weights, batch, nu)
+        #     grads = grad(loss)(params, weights, batch, nu)
+        #     return value, grads
+        #
+        # def lbfgs_value_fn(params):
+        #     """Value function for L-BFGS."""
+        #     value, _ = value_and_grad_fn(params, state.weights, batch, nu)
+        #     return value
+        #
+        # def lbfgs_grad_fn(params):
+        #     """Gradient function for L-BFGS."""
+        #     _, grads = value_and_grad_fn(params, state.weights, batch, nu)
+        #     return grads
+
+        #linesearch = optax.scale_by_backtracking_linesearch(
+        #    max_backtracking_steps=config.max_backtracking_steps, store_grad=True)
+        linesearch = optax.scale_by_zoom_linesearch(max_linesearch_steps=20)
+        tx = optax.lbfgs(memory_size=100, linesearch=linesearch)
     else:
         raise NotImplementedError(f"Optimizer {config.optimizer} not supported yet!")
 
@@ -79,15 +96,37 @@ def _create_optimizer(config):
 
     return tx
 
+def _create_optimizer_raw(config):
+    if config.optimizer == "Adam":
+        lr = optax.exponential_decay(
+            init_value=config.learning_rate,
+            transition_steps=config.decay_steps,
+            decay_rate=config.decay_rate,
+        )
+        tx = optax.adam(
+            learning_rate=lr, b1=config.beta1, b2=config.beta2, eps=config.eps
+        )
+    else:
+        raise NotImplementedError(f"Optimizer {config.optimizer} not supported yet!")
 
-def _create_train_state(config):
+    # Gradient accumulation
+    if config.grad_accum_steps > 1:
+        tx = optax.MultiSteps(tx, every_k_schedule=config.grad_accum_steps)
+
+    return tx
+
+def _create_train_state(config, raw=False):
     # Initialize network
     arch = _create_arch(config.arch)
     x = jnp.ones(config.input_dim)
     params = arch.init(random.PRNGKey(config.seed), x)
 
     # Initialize optax optimizer
-    tx = _create_optimizer(config.optim)
+    if raw:
+        tx = _create_optimizer_raw(config.optim.adam)
+    else:
+        tx = _create_optimizer(config.optim)
+
 
     # Convert config dict to dict
     init_weights = dict(config.weighting.init_weights)
@@ -106,8 +145,10 @@ def _create_train_state(config):
 class PINN:
     def __init__(self, config):
         self.config = config
-        self.state = _create_train_state(config)
-
+        if hasattr(config.optim, "adam"):
+            self.state = _create_train_state(config, raw=True)
+        else:
+            self.state = _create_train_state(config)
     def u_net(self, params, *args):
         raise NotImplementedError("Subclasses should implement this!")
 

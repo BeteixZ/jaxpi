@@ -5,7 +5,7 @@ from jax.flatten_util import ravel_pytree
 
 
 def get_dataset(Re):
-    data = scipy.io.loadmat("data/ldc_Re{}.mat".format(Re))
+    data = scipy.io.loadmat("./data/ldc_Re{}.mat".format(Re))
     u_ref = data["u"]
     v_ref = data["v"]
     x_star = data["x"].flatten()

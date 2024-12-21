@@ -15,7 +15,7 @@ def flatten_pytree(pytree):
     return ravel_pytree(pytree)[0]
 
 
-@partial(jit, static_argnums=(0,))
+#@partial(jit, static_argnums=(0,))
 def jacobian_fn(apply_fn, params, *args):
     # apply_fn needs to be a scalar function
     J = grad(apply_fn, argnums=0)(params, *args)
@@ -23,7 +23,7 @@ def jacobian_fn(apply_fn, params, *args):
     return J
 
 
-@partial(jit, static_argnums=(0,))
+#@partial(jit, static_argnums=(0,))
 def ntk_fn(apply_fn, params, *args):
     # apply_fn needs to be a scalar function
     J = jacobian_fn(apply_fn, params, *args)
@@ -31,7 +31,7 @@ def ntk_fn(apply_fn, params, *args):
     return K
 
 
-def save_checkpoint(state, workdir, keep=5, name=None):
+def save_checkpoint(state, workdir, keep=5, name=None, step=0):
     # Create the workdir if it doesn't exist.
     if not os.path.isdir(workdir):
         os.makedirs(workdir)

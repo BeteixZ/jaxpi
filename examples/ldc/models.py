@@ -44,6 +44,7 @@ class NavierStokes2D(ForwardBVP):
         return u, v, p
 
     def u_net(self, params, x, y):
+        print("U_net", x, y)
         u, _, _ = self.neural_net(params, x, y)
         return u
 
@@ -59,6 +60,7 @@ class NavierStokes2D(ForwardBVP):
         # u, v, p = self.neural_net(params, x, y)
 
         def fu_x(x, y):
+            print("Rnet",x, y)
             return jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (1.0, 0.0))
 
         def fu_y(x, y):
@@ -110,7 +112,7 @@ class NavierStokes2D(ForwardBVP):
 
         #u_xx = jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (1.0, 0.0))[1]
         #u_yy = jax.jvp(lambda x, y: self.u_net(params, x, y), (x, y), (0.0, 1.0))[1]
-#
+
         #v_xx = jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (1.0, 0.0))[1]
         #v_yy = jax.jvp(lambda x, y: self.v_net(params, x, y), (x, y), (0.0, 1.0))[1]
 
@@ -226,7 +228,7 @@ class NavierStokesEvaluator(BaseEvaluator):
         l2_error = self.model.compute_l2_error(params, x_star, y_star, U_ref)
         self.log_dict["l2_error"] = l2_error
 
-    def log_preds(self, params, x_star, y_star):
+    def log_preds(self, params, x_star, y_star, U_ref):
         u_pred = vmap(vmap(self.model.u_net, (None, None, 0)), (None, 0, None))(
             params, x_star, y_star
         )
@@ -235,10 +237,18 @@ class NavierStokesEvaluator(BaseEvaluator):
         )
         U_pred = jnp.sqrt(u_pred**2 + v_pred**2)
 
-        fig = plt.figure()
-        plt.pcolor(U_pred.T, cmap="jet")
-        self.log_dict["U_pred"] = fig
-        fig.close()
+        fig, ax = plt.subplots(3, 1, figsize=(5, 15))
+        ax[0].contourf(x_star, y_star, U_ref.T, cmap="viridis")
+        ax[0].set_title("Reference")
+        ax[1].contourf(x_star, y_star, U_pred.T, cmap="viridis")
+        ax[1].set_title("Prediction")
+        ax[2].contourf(x_star, y_star, U_ref.T - U_pred.T, cmap="rainbow")
+        ax[2].set_title("Error")
+        #colorbar
+        plt.colorbar()
+        plt.tight_layout()
+        plt.show()
+
 
     def __call__(self, state, batch, x_star, y_star, U_ref, nu):
         self.log_dict = super().__call__(state, batch, nu)
@@ -247,6 +257,6 @@ class NavierStokesEvaluator(BaseEvaluator):
             self.log_errors(state.params, x_star, y_star, U_ref)
 
         if self.config.logging.log_preds:
-            self.log_preds(state.params, x_star, y_star)
+            self.log_preds(state.params, x_star, y_star, U_ref)
 
         return self.log_dict

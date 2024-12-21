@@ -5,6 +5,8 @@ import jax.numpy as jnp
 from jax import random, pmap, local_device_count
 
 from torch.utils.data import Dataset
+from pyDOE import lhs
+import numpy as np
 
 
 class BaseSampler(Dataset):
@@ -33,6 +35,8 @@ class UniformSampler(BaseSampler):
     @partial(pmap, static_broadcasted_argnums=(0,))
     def data_generation(self, key):
         "Generates data containing batch_size samples"
+
+
         batch = random.uniform(
             key,
             shape=(self.batch_size, self.dim),
@@ -41,6 +45,29 @@ class UniformSampler(BaseSampler):
         )
 
         return batch
+
+
+class LHSSampler(BaseSampler):
+    def __init__(self, dom, batch_size, rng_key=random.PRNGKey(1234)):
+        super().__init__(batch_size, rng_key)
+        self.dom = dom
+        self.dim = dom.shape[0]
+
+    @partial(pmap, static_broadcasted_argnums=(0,))
+    def data_generation(self, key):
+        "Generates data containing batch_size samples using LHS"
+        # Generate LHS samples using pyDOE in [0,1]
+        # Convert random key to numpy random state
+
+        # Set numpy random seed and generate samples
+        np.random.seed(42)
+        points = lhs(n=self.dim, samples=self.batch_size, criterion='maximin')
+
+        # Convert to JAX array and scale to domain
+        points = jnp.array(points)
+        scaled_points = points * (self.dom[:, 1] - self.dom[:, 0]) + self.dom[:, 0]
+
+        return scaled_points
 
 
 class SpaceSampler(BaseSampler):

@@ -43,7 +43,7 @@ def get_config():
 
     # Training
     config.training = training = ml_collections.ConfigDict()
-    training.Re =[100] # [100, 400, 1000]
+    training.Re =[400] # [100, 400, 1000]
     training.max_steps = [50000] # [20000, 40000, 140000]
     training.batch_size = 1024 * 4
 
@@ -51,6 +51,7 @@ def get_config():
     config.weighting = weighting = ml_collections.ConfigDict()
     weighting.scheme = "grad_norm"
     weighting.init_weights = ml_collections.ConfigDict(
+        # {"u_bc": 1.0, "v_bc": 1.0, "b1_bc": 1.0, "ru": 1.0, "rv": 1.0, "rc": 2.0}
         {"u_bc": 1.0, "v_bc": 1.0, "b1_bc": 1.0, "b2_bc": 1.0, "ru": 1.0, "rv": 1.0, "rc": 2.0}
     )
     weighting.momentum = 0.9

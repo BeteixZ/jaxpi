@@ -333,12 +333,14 @@ v_Ghia = {
 def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
     # Load dataset
     u_ref, v_ref, x_star, y_star, nu = get_dataset(Re)
+    nu = nu[0][0]
 
     # Initialize model
     model = models.NavierStokes2D(config)
 
     # Restore checkpoint
     path = os.path.join("/home/pai/coding/python/jaxpi/examples/ldc_vv/", config.wandb.name, "ckpt", "Re{}".format(Re))
+    print("Restoring checkpoint from {}".format(path))
     model.state = restore_checkpoint(model.state, path)
     params = model.state.params
 
@@ -352,6 +354,10 @@ def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
 
     w_pred = vmap(vmap(model.w_net, (None, None, 0)), (None, 0, None))(
         params, x_star, y_star)
+
+    ru, rv, rc = vmap(vmap(model.r_net, (None, None, None, 0)), (None, None, 0, None))(
+        params, nu, x_star, y_star
+    )
 
     u_l2_error = jnp.sqrt(jnp.mean((u_ref - u_pred) ** 2)) / jnp.sqrt(
         jnp.mean(u_ref**2)
@@ -491,7 +497,7 @@ def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
     fig4.savefig(save_path + "ldc_v_zoom" + ".pdf", bbox_inches="tight", dpi=300)
 
 
-    fig5 = plt.figure(figsize=(16, 5))
+    fig5 = plt.figure(figsize=(12, 5))
     plt.subplot(1, 2, 1)
     plt.plot(y_Ghia, u_Ghia[Re], "o", label="Ghia")
     plt.plot(y_star, u_ref[n_x // 2, :], label="Reference")
@@ -544,7 +550,7 @@ def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
     plt.tight_layout()
 
     plt.subplot(1, 3, 3)
-    plt.pcolor(XX[1:-1,1:-1], YY[1:-1,1:-1], jnp.abs(omega[1:-1,1:-1] - w_pred[1:-1,1:-1]), cmap="viridis", vmin=0, vmax=1)
+    plt.pcolor(XX[1:-1,1:-1], YY[1:-1,1:-1], jnp.abs(omega[1:-1,1:-1] - w_pred[1:-1,1:-1]), cmap="viridis", vmin=0, vmax=5)
     plt.colorbar()
     plt.xlabel("x")
     plt.ylabel("y")
@@ -558,3 +564,53 @@ def evaluate(config: ml_collections.ConfigDict, workdir: str, Re: int):
     )
 
     print("w_l2_error: {:.4e}".format(w_l2_error))
+
+    fig6 = plt.figure(figsize=(20, 11))
+    plt.subplot(2, 3, 1)
+    plt.pcolor(XX[:n_x // 5, -n_y // 5:], YY[:n_x // 5, -n_y // 5:], ru[:n_x // 5, -n_y // 5:], cmap="jet", vmin=-10, vmax=10)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("ru(x, y) LU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 2)
+    plt.pcolor(XX[:n_x // 5, -n_y // 5:], YY[:n_x // 5, -n_y // 5:], rv[:n_x // 5, -n_y // 5:], cmap="jet", vmin=-10, vmax=10)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("rv(x, y) LU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 3)
+    plt.pcolor(XX[:n_x // 5, -n_y // 5:], YY[:n_x // 5, -n_y // 5:], rc[:n_x // 5, -n_y // 5:], cmap="jet", vmin=-10, vmax=10)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("rc(x, y) LU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 4)
+    plt.pcolor(XX[4*n_x // 5:, -n_y // 5:], YY[4*n_x // 5:, -n_y // 5:], ru[4*n_x // 5:, -n_y // 5:], cmap="jet", vmin=-10, vmax=10)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("ru(x, y) RU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 5)
+    plt.pcolor(XX[4*n_x // 5:, -n_y // 5:], YY[4*n_x // 5:, -n_y // 5:], rv[4*n_x // 5:, -n_y // 5:], cmap="jet", vmin=-10, vmax=10)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("rv(x, y) RU")
+    plt.tight_layout()
+
+    plt.subplot(2, 3, 6)
+    plt.pcolor(XX[4*n_x // 5:, -n_y // 5:], YY[4*n_x // 5:, -n_y // 5:], rc[4*n_x // 5:, -n_y // 5:], cmap="jet", vmin=-10, vmax=10)
+    plt.colorbar()
+    plt.xlabel("x")
+    plt.ylabel("y")
+    plt.title("rc(x, y) RU")
+    plt.tight_layout()
+    fig6.savefig(save_path + "ldc_res" + ".pdf", bbox_inches="tight", dpi=300)

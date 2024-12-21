@@ -7,7 +7,7 @@ def get_config():
     """Get the default hyperparameter configuration."""
     config = ml_collections.ConfigDict()
 
-    config.mode = "eval"
+    config.mode = "train"
 
     # Weights & Biases
     config.wandb = wandb = ml_collections.ConfigDict()
@@ -17,11 +17,11 @@ def get_config():
 
     # Arch
     config.arch = arch = ml_collections.ConfigDict()
-    arch.arch_name = "ModifiedMlp"
-    arch.num_layers = 8
-    arch.hidden_dim = 100
+    arch.arch_name = "Mlp"
+    arch.num_layers = 2
+    arch.hidden_dim = 1024
     arch.out_dim = 3
-    arch.activation = "swish"
+    arch.activation = "sin"
     arch.periodicity = False
     arch.fourier_emb = ml_collections.ConfigDict(
         {"embed_scale": 10.0, "embed_dim": 100}
@@ -44,12 +44,12 @@ def get_config():
     # Training
     config.training = training = ml_collections.ConfigDict()
     training.Re =[400] # [100, 400, 1000]
-    training.max_steps = [50000] # [20000, 40000, 140000]
-    training.batch_size = 1024 * 4
+    training.max_steps = [1000] # [20000, 40000, 140000]
+    training.batch_size = 1024
 
     # Weighting
     config.weighting = weighting = ml_collections.ConfigDict()
-    weighting.scheme = "grad_norm"
+    weighting.scheme = None#"grad_norm"
     weighting.init_weights = ml_collections.ConfigDict(
         {"u_bc": 1.0, "v_bc": 1.0, "ru": 1.0, "rv": 1.0, "rc": 1.0}
     )
@@ -62,9 +62,9 @@ def get_config():
     logging.log_errors = True
     logging.log_losses = True
     logging.log_weights = True
-    logging.log_grads = True
-    logging.log_ntk = True
-    logging.log_preds = False
+    logging.log_grads = False
+    logging.log_ntk = False
+    logging.log_preds = True
 
     # Saving
     config.saving = saving = ml_collections.ConfigDict()

@@ -50,3 +50,4 @@ class Logger:
 
         for line in message.split("\n"):
             self.logger.info(line)
+            print(line)
